@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "command": "python hooks/post_edit_check.py ./src ./tests"
+      }
+    ],
+    "PreCommit": [
+      {
+        "command": "python hooks/pre_commit_check.py"
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Bash(python -m evals.*)",
+      "Bash(python hooks/*)",
+      "Bash(python -m pytest*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)"
+    ]
+  }
+}

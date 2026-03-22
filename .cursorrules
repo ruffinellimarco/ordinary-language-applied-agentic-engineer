@@ -1,0 +1,78 @@
+# .cursorrules
+# Cursor AI — Project Rules (Karpathy + Boris Cherny + Nikita Bier synthesis)
+# These rules apply to every file in this project.
+
+## Philosophy
+- Vibe coding + agentic loops: high-level intent, autonomous execution, continuous learning.
+- Every line does one thing. Every function has one job. Every file has one concern.
+- Understand → Plan → Execute → Verify → Self-Review → Close Loop.
+
+## Code Rules
+- Functions: max 60 lines. Break anything longer into named helpers.
+- Files: max 400 lines. If a file is growing, extract into a new logically named module.
+- Single Responsibility: one file = one concern.
+- Type hints on every function signature.
+- No magic numbers — use named constants.
+- Never silence exceptions.
+
+## Docstring Quality Bar
+Every function needs a docstring. Verb-first, plain English:
+- ✅ "Fetches active accounts from BigQuery for the given period."
+- ✅ "Calculates net premium retention rate for a cohort of accounts."
+- ❌ "get accounts" / "calculates stuff" / "this function does X"
+
+## OBSERVABILITY CONTRACT — Non-Negotiable
+
+Every non-trivial function MUST use @observable.
+Import: `from contracts.observable import observable`
+
+```python
+@observable(tags=["db"])
+def fetch_user(user_id: str) -> dict:
+    """Fetches a user record from the database by ID."""
+    ...
+```
+
+Tags to use (pick all that apply):
+- endpoint   → HTTP/API exposure
+- db         → database read/write
+- transform  → data transformation
+- external-api → third-party call
+- critical   → business-critical path
+- billing    → financial data
+- auth       → authentication/authorization
+
+Exempt from @observable (but NOT from docstrings):
+- Private helpers prefixed with `_`
+- Pure utility functions with no side effects (1-2 statements)
+- __dunder__ methods
+
+## TypeScript equivalent
+```typescript
+import { observable } from './contracts/observable'
+
+const fetchUser = observable("Fetches a user record from the database by ID", ["db"])(
+  async (userId: string): Promise<User> => { ... }
+)
+```
+
+## TDD — Test-Driven Development
+- Write the test first in `tests/test_<module>.py`
+- Run it, watch it fail, then implement in `src/`
+- Tests MUST live in `tests/`. Never in `src/`.
+- Scratch work goes in `scratch/`. Never in `src/`.
+- `scratch/` is excluded from evals. It's disposable.
+
+## Git
+- Commit after every meaningful step with clear messages.
+- Use branches for parallel work.
+- Never commit broken code.
+
+## Self-Review Checklist (run before finishing any task)
+1. Does every function have a docstring?
+2. Does every non-trivial function have @observable?
+3. Are all files under 400 lines?
+4. Are all functions under 60 lines?
+5. Do tests cover the new/changed logic? (in `tests/`, not `src/`)
+6. Is there anything to add to CLAUDE.md as a lesson?
+7. Is scratch work in `scratch/`, not mixed into `src/`?
