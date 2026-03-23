@@ -1,6 +1,6 @@
 # Agentic Engineer Framework
 
-> I see Agentic Engineering as the modern day LEGO bricks. In a LEGO structure, often times you don't see all the pieces, but they can be integral to the structure. I believe code operates in the same way — the structure can sometimes be dependent on things we may not see. I am not an engineer by trade, but I aim to be one by practice. This framework helps me mitigate my slop code and build in a more elegant fashion.
+> I see Agentic Engineering as the modern day LEGO bricks. In a LEGO structure, often times you don't see all the pieces, but they can be integral to the structure. I believe code operates in the same way. The structure can sometimes be dependent on things we may not see. I am not an engineer by trade, but I aim to be one by practice. This framework helps me mitigate my slop code and build in a more elegant fashion.
 
 ---
 
