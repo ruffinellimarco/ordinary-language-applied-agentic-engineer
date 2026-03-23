@@ -6,78 +6,96 @@
 
 ## What This Is
 
-A drop-in observability and quality framework for any Python project. Every function describes itself at runtime — docstrings become live trace logs, nested call chains are fully visible, and AI coding assistants (Claude, Codex, Cursor) are forced into compliance by hooks.
+An npm-installable observability and quality framework for AI-assisted development. One command installs slash commands and hooks into Claude Code. Then `/obs:init` scaffolds any project with:
 
-Three layers working together:
+- **`@observable` decorator** — every function narrates itself at runtime
+- **Agent contracts** — Claude, Codex, and Cursor are forced into compliance
+- **Automatic hooks** — violations caught after every edit, blocked before every commit
+- **TDD structure** — `tests/`, `scratch/`, and clean `src/`
 
-1. **The Decorator** (`@observable`) — wraps any function with automatic entry/exit/error tracing
-2. **The Agent Contract** (`CLAUDE.md`, `AGENTS.md`, `.cursorrules`) — tells AI assistants the rules
-3. **The Hooks** — automatic enforcement that runs after every edit and before every commit
+## Install
+
+```bash
+npx ola-obs-contracts
+```
+
+That's it. This installs globally into `~/.claude/`. Now every Claude Code session has:
+
+| Command | What It Does |
+|---|---|
+| `/obs:init` | Scaffold a new project with full observability |
+| `/obs:check` | Run compliance check (docstrings + `@observable`) |
+| `/obs:trace` | Show endpoint call-tree visualization |
+
+Plus a PostToolUse hook that auto-checks compliance after every file edit.
+
+### Other install options
+
+```bash
+npx ola-obs-contracts --local       # Install into current project only
+npx ola-obs-contracts --uninstall   # Clean removal
+npx ola-obs-contracts --help        # Usage info
+```
+
+---
+
+## Quick Start
+
+```bash
+# 1. Install (one time)
+npx ola-obs-contracts
+
+# 2. Open Claude Code in any project, then:
+/obs:init my-project
+
+# 3. Start coding — hooks enforce quality automatically
+```
+
+---
 
 ## What It Looks Like
 
-When you run code instrumented with `@observable`, you see the full call graph:
+When you run code instrumented with `@observable`, every function narrates itself:
 
 ```
-→ calculate: "Handles a calculator request and returns the formatted result."  [endpoint, critical]
-  → parse_input: "Extracts and casts operation, a, and b from the request payload."  [transform]
-  ← parse_input: completed in 0.000s
-  → validate_operation: "Validates that the operation is in the supported set."  [transform]
-  ← validate_operation: completed in 0.000s
-  → compute: "Performs the arithmetic operation on two operands."  [transform]
-  ← compute: completed in 0.000s
-← calculate: completed in 0.000s
+-> calculate: "Handles a calculator request..."  [endpoint, critical]
+  -> parse_input: "Extracts operation and operands..."  [transform]
+  <- parse_input: completed in 0.000s
+  -> validate_operation: "Validates the operation..."  [transform]
+  <- validate_operation: completed in 0.000s
+  -> compute: "Performs the arithmetic operation..."  [transform]
+  <- compute: completed in 0.000s
+<- calculate: completed in 0.001s
 ```
 
-Every function narrates itself. The indentation is the call graph — you see depth at a glance. Errors are caught and traced with full context.
+The indentation IS the call graph. You see depth, timing, and purpose at a glance.
 
 ---
 
-## Quickstart
-
-### New project — clone the scaffold
-
-```bash
-git clone https://github.com/ruffinellimarco/Agentic-Engineer-Framework.git my-project
-cd my-project
-python -m src.main
-```
-
-### Existing project — copy the essentials
-
-```bash
-# From the cloned repo, target your existing project
-./install.sh ../my-existing-project
-```
-
-This copies `contracts/`, `evals/`, `hooks/`, `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, and `.claude/settings.json` into your project.
-
----
-
-## Project Structure
+## What `/obs:init` Creates
 
 ```
-├── .claude/settings.json      # Claude Code hooks (auto-run after Edit/Write)
-├── .cursorrules               # Cursor AI rules
-├── AGENTS.md                  # Codex / ChatGPT agent contract
-├── CLAUDE.md                  # Claude Code agent contract
-├── contracts/
-│   └── observable.py          # @observable decorator (sync + async)
-├── evals/
-│   └── check_observability.py # CI compliance checker
-├── hooks/
-│   ├── post_edit_check.py     # Runs after every file edit
-│   └── pre_commit_check.py    # Blocks commits with violations
-├── src/                       # Production code (must pass all checks)
-├── tests/                     # All tests live here (TDD)
-└── scratch/                   # Exploration & prototyping (excluded from evals)
+my-project/
+  contracts/
+    observable.py            @observable decorator (sync + async)
+  evals/
+    check_observability.py   CI compliance checker
+  hooks/
+    post_edit_check.py       Runs after every file edit
+    pre_commit_check.py      Blocks commits with violations
+  tests/                     TDD — all tests live here
+  scratch/                   Exploration (excluded from evals)
+  src/                       Production code (must pass all checks)
+  .claude/settings.json      Project-level hooks
+  CLAUDE.md                  Claude Code agent contract
+  AGENTS.md                  Codex agent contract
+  .cursorrules               Cursor rules
+  .gitignore
 ```
 
 ---
 
-## How It Works
-
-### The `@observable` Decorator
+## The `@observable` Decorator
 
 ```python
 from contracts.observable import observable
@@ -95,31 +113,45 @@ def validate_payload(payload: dict) -> dict:
     ...
 ```
 
-Works with both sync and async functions. Tags classify the function's role: `endpoint`, `db`, `transform`, `external-api`, `critical`, `billing`, `auth`, `cache`.
+Works with both sync and async functions. Tags classify the function:
 
-### Hooks — Automatic Enforcement
+| Tag | When to Use |
+|---|---|
+| `endpoint` | HTTP/API entry point — full trace required |
+| `db` | Database read/write |
+| `transform` | Data transformation or business logic |
+| `external-api` | Third-party service call |
+| `critical` | Business-critical execution path |
+| `billing` | Financial data |
+| `auth` | Authentication/authorization |
+| `cache` | Caching layer |
+
+---
+
+## Hooks — Automatic Enforcement
 
 | Trigger | What Runs | What It Catches |
 |---|---|---|
-| Every `Edit`/`Write` in Claude Code | `hooks/post_edit_check.py` | Missing docstrings, missing `@observable`, broken traces |
-| Every `git commit` | `hooks/pre_commit_check.py` | Same — blocks the commit |
-| CI push | `evals/check_observability.py` | Full scan with compliance metrics |
+| Every `Edit`/`Write` | PostToolUse hook | Missing docstrings, missing `@observable`, broken traces |
+| Every `git commit` | `pre_commit_check.py` | Same — blocks the commit |
+| CI push | `check_observability.py` | Full scan with compliance metrics |
 
 Hook output after an edit:
 ```
-── obs-check ──────────────────────────────────────────
-✅ 10/10 functions compliant (100%) | 2 endpoint(s) traced
+-- obs-check --------------------------------------------------
+  10/10 functions compliant (100%) | 2 endpoint(s) traced
 
   Endpoint traces:
-    → calculate  [endpoint, critical]
-      → compute  [transform]
-      → parse_input  [transform]
-      → validate_operation  [transform]
-
-─────────────────────────────────────────────────────
+    -> calculate  [endpoint, critical]
+      -> compute  [transform]
+      -> parse_input  [transform]
+      -> validate_operation  [transform]
+-----------------------------------------------------
 ```
 
-### TDD Workflow
+---
+
+## TDD Workflow
 
 1. **Think** in `scratch/` — explore, prototype, no rules
 2. **Test** in `tests/` — write the test first, watch it fail
@@ -137,7 +169,6 @@ ObservabilityConfig.configure(
     emit_to="stdout",           # "stdout" | "cloud_logging" | "custom"
     project_name="my-app",
     include_args=False,         # Log function arguments (watch for PII)
-    include_return=False,       # Log return values
     max_depth=20,               # Circuit breaker for deep recursion
 )
 ```
@@ -154,8 +185,6 @@ ObservabilityConfig.configure(emit_to="custom", custom_emitter=my_emitter)
 ---
 
 ## CI Integration
-
-Add to GitHub Actions:
 
 ```yaml
 - name: Observability compliance check
@@ -175,6 +204,16 @@ Add to GitHub Actions:
 | OpenAI Codex | `AGENTS.md` | Yes |
 | Cursor | `.cursorrules` | Yes |
 | Others | Copy rules into system prompt | Manual |
+
+---
+
+## Uninstall
+
+```bash
+npx ola-obs-contracts --uninstall
+```
+
+Cleanly removes commands, hooks, and templates from `~/.claude/`. Project-level files (contracts/, evals/, etc.) are not touched.
 
 ---
 

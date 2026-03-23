@@ -1,0 +1,36 @@
+{
+  "name": "ola-obs-contracts",
+  "version": "1.0.0",
+  "description": "Observable Language Applied — Observability contracts and enforcement for AI-assisted development",
+  "bin": {
+    "ola-obs-contracts": "bin/install.js"
+  },
+  "files": [
+    "bin",
+    "commands",
+    "hooks/obs-post-edit.js",
+    "templates"
+  ],
+  "keywords": [
+    "claude",
+    "claude-code",
+    "codex",
+    "cursor",
+    "observability",
+    "contracts",
+    "python",
+    "agentic-engineering",
+    "hooks",
+    "tdd"
+  ],
+  "author": "Marco Ruffinelli <ruffinellimarco@users.noreply.github.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ruffinellimarco/ordinary-language-applied-agentic-engineer.git"
+  },
+  "homepage": "https://github.com/ruffinellimarco/ordinary-language-applied-agentic-engineer#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
