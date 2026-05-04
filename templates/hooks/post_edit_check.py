@@ -5,7 +5,7 @@ hooks/post_edit_check.py
 Fast observability compliance check — runs after every file edit.
 
 Called automatically by Claude Code PostToolUse hooks, or manually:
-    python hooks/post_edit_check.py [file_or_directory]
+    python hooks/post_edit_check.py [file_or_directory ...]
 
 Checks:
   1. Every function has a docstring
@@ -83,6 +83,12 @@ def _is_trivial(node):
     return len(body) <= 1
 
 
+def _is_test_file(filepath):
+    """Returns True if the file is in tests or follows test file naming."""
+    path_str = str(filepath).replace("\\", "/")
+    return "/tests/" in path_str or path_str.startswith("tests/") or Path(filepath).name.startswith("test_")
+
+
 # ── Core Check ────────────────────────────────────────────────────────────────
 
 def check_file(filepath):
@@ -97,6 +103,7 @@ def check_file(filepath):
     total = 0
     compliant = 0
     obs_funcs = {}  # name -> {tags, calls}
+    is_test = _is_test_file(filepath)
 
     for node in ast.walk(tree):
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -118,7 +125,7 @@ def check_file(filepath):
         if tags is not None:
             calls = _get_called_names(node)
             obs_funcs[node.name] = {"tags": tags, "calls": calls}
-        elif not _is_exempt(node) and not _is_trivial(node):
+        elif not is_test and not _is_exempt(node) and not _is_trivial(node):
             violations.append({
                 "file": str(filepath), "line": node.lineno,
                 "func": node.name, "type": "missing_observable",
@@ -170,11 +177,11 @@ def _trace_tree(name, info, all_funcs, depth, lines, visited):
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-def _resolve_target():
+def _resolve_targets():
     """Determines which files to scan based on args or hook environment."""
     # Priority 1: explicit CLI argument
     if len(sys.argv) > 1:
-        return sys.argv[1]
+        return sys.argv[1:]
 
     # Priority 2: Claude Code hook environment (TOOL_INPUT has file_path)
     tool_input = os.environ.get("TOOL_INPUT", "")
@@ -183,28 +190,28 @@ def _resolve_target():
             data = json.loads(tool_input)
             fp = data.get("file_path", "")
             if fp and fp.endswith(".py"):
-                return fp
+                return [fp]
         except (json.JSONDecodeError, KeyError):
             pass
 
     # Default: scan src/
-    return "./src"
+    return ["./src"]
 
 
 def main():
     """Runs the post-edit observability check and prints results."""
-    target = _resolve_target()
-    target_path = Path(target)
+    targets = _resolve_targets()
+    files = []
 
-    if target_path.is_file():
-        files = [target_path] if target_path.suffix == ".py" else []
-    elif target_path.is_dir():
-        files = [
-            f for f in target_path.rglob("*.py")
-            if "__pycache__" not in str(f) and ".venv" not in str(f)
-        ]
-    else:
-        sys.exit(0)
+    for target in targets:
+        target_path = Path(target)
+        if target_path.is_file() and target_path.suffix == ".py":
+            files.append(target_path)
+        elif target_path.is_dir():
+            files.extend([
+                f for f in target_path.rglob("*.py")
+                if "__pycache__" not in str(f) and ".venv" not in str(f)
+            ])
 
     if not files:
         sys.exit(0)

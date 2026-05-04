@@ -6,11 +6,13 @@
 
 ## What This Is
 
-An npm-installable observability and quality framework for AI-assisted development. One command installs slash commands and hooks into Claude Code. Then `/obs:init` scaffolds any project with:
+An npm-installable observability and quality framework for AI-assisted development. One command installs slash commands, hooks, and universal agent instructions. Then `/obs:init` scaffolds any project with:
 
 - **`@observable` decorator** — every function narrates itself at runtime
-- **Agent contracts** — Claude, Codex, and Cursor are forced into compliance
+- **Agent contracts** — Claude, Codex, Cursor, and other code-assisting tools share the same compliance rules
+- **Behavioral guardrails** — agent instructions reduce overcomplication, hidden assumptions, and broad diffs
 - **Automatic hooks** — violations caught after every edit, blocked before every commit
+- **Canonical dictionaries** — `function-dictionary.md` and `file-dictionary.md` track what is implemented and where
 - **TDD structure** — `tests/`, `scratch/`, and clean `src/`
 
 ## Install
@@ -26,8 +28,9 @@ That's it. This installs globally into `~/.claude/`. Now every Claude Code sessi
 | `/obs:init` | Scaffold a new project with full observability |
 | `/obs:check` | Run compliance check (docstrings + `@observable`) |
 | `/obs:trace` | Show endpoint call-tree visualization |
+| `/agent` | Universal post-tool-call checkpoint for agents without native hooks |
 
-Plus a PostToolUse hook that auto-checks compliance after every file edit.
+Plus a PostToolUse hook that auto-checks compliance after every file edit in Claude Code. Other code-assisting tools should run `/agent` after code-writing tool calls, or wire the same command into their post-edit hook system.
 
 ### Other install options
 
@@ -48,8 +51,116 @@ npx ola-obs-contracts
 # 2. Open Claude Code in any project, then:
 /obs:init my-project
 
-# 3. Start coding — hooks enforce quality automatically
+# 3. Start coding — hooks or /agent enforce quality automatically
 ```
+
+---
+
+## Implementation Guide
+
+Use this framework as a traceability contract for the repository, not as a
+style-only ruleset. The goal is that a person or agent can ask "what does this
+code do, where is it implemented, and how do we know?" and get the same answer
+from runtime traces, static checks, and canonical dictionaries.
+
+### 1. Scaffold the repository
+
+Run `/obs:init` in the project root. This creates the observability contract,
+agent instructions, enforcement scripts, and canonical dictionaries:
+
+```bash
+/obs:init my-project
+```
+
+For an existing project, keep the scaffold but migrate code incrementally:
+
+- Put production code under `src/`.
+- Put tests under `tests/`.
+- Put experiments under `scratch/`.
+- Keep `contracts/`, `evals/`, and `hooks/` committed to the repo.
+
+### 2. Instrument meaningful functions
+
+Every function gets a verb-first docstring. Every function that performs I/O,
+business logic, data transformation, external calls, or side effects gets
+`@observable`.
+
+```python
+from contracts.observable import observable
+
+@observable(tags=["endpoint", "critical"])
+def handle_request(payload: dict) -> dict:
+    """Handles the incoming request and returns the processed response."""
+    validated = validate_payload(payload)
+    return process_payload(validated)
+```
+
+Use tags to make traces scannable:
+
+- `endpoint` for entry points
+- `db` for database reads/writes
+- `transform` for business logic or data changes
+- `external-api` for third-party calls
+- `critical`, `billing`, `auth`, `cache` when relevant
+
+### 3. Maintain the canonical dictionaries
+
+Update both dictionaries in the same change as the code:
+
+- `function-dictionary.md` records implemented functions, file paths,
+  signatures, purposes, observable tags, callers/callees, tests, and status.
+- `file-dictionary.md` records file responsibilities, exports, dependencies,
+  known users, tests, observable surface, and status.
+
+These files are verified artifacts, not agent prose. The checker fails in both
+directions:
+
+- code has a function missing from `function-dictionary.md`
+- `function-dictionary.md` points to a function that does not exist
+- code has a file missing from `file-dictionary.md`
+- `file-dictionary.md` points to a file that does not exist
+- a dictionary references a missing test file
+
+Run:
+
+```bash
+python -m evals.check_dictionaries ./src --report
+```
+
+### 4. Use `/agent` after code-writing tool calls
+
+Claude Code gets an automatic PostToolUse hook. Other tools should run `/agent`
+after edits or wire the same steps into their hook system.
+
+`/agent` enforces the working loop:
+
+1. Think before coding: state assumptions and ask when unclear.
+2. Prefer simple, non-speculative changes.
+3. Make surgical edits tied to the task.
+4. Define verifiable success criteria.
+5. Run observability checks.
+6. Update dictionaries.
+7. Verify dictionaries.
+8. Render endpoint traces.
+
+### 5. Verify before finishing
+
+Run these checks locally and in CI:
+
+```bash
+python -m evals.check_observability ./src ./tests --report
+python -m evals.check_dictionaries ./src --report
+python hooks/post_edit_check.py ./src ./tests
+pytest tests/ -v
+```
+
+A task is not done until:
+
+- observability compliance passes
+- dictionary verification passes
+- endpoint traces have no unexplained gaps
+- tests for changed behavior pass
+- the dictionaries reflect the code that actually exists
 
 ---
 
@@ -83,6 +194,8 @@ my-project/
   hooks/
     post_edit_check.py       Runs after every file edit
     pre_commit_check.py      Blocks commits with violations
+  function-dictionary.md     Canonical inventory of functions, locations, tags, tests
+  file-dictionary.md         Canonical inventory of files, responsibilities, exports
   tests/                     TDD — all tests live here
   scratch/                   Exploration (excluded from evals)
   src/                       Production code (must pass all checks)
@@ -92,8 +205,6 @@ my-project/
   .cursorrules               Cursor rules
   .gitignore
 ```
-
----
 
 ## The `@observable` Decorator
 
@@ -190,6 +301,9 @@ ObservabilityConfig.configure(emit_to="custom", custom_emitter=my_emitter)
 - name: Observability compliance check
   run: python -m evals.check_observability ./src ./tests
 
+- name: Canonical dictionary check
+  run: python -m evals.check_dictionaries ./src --report
+
 - name: Run tests
   run: pytest tests/ -v
 ```
@@ -203,7 +317,10 @@ ObservabilityConfig.configure(emit_to="custom", custom_emitter=my_emitter)
 | Claude Code | `CLAUDE.md` + `.claude/settings.json` | Yes |
 | OpenAI Codex | `AGENTS.md` | Yes |
 | Cursor | `.cursorrules` | Yes |
-| Others | Copy rules into system prompt | Manual |
+| Others | `AGENTS.md` + `/agent` checkpoint | Manual or adapter hook |
+
+Any code-assisting tool can comply by following the Implementation Guide and
+running `/agent` after code-writing actions when native hooks are unavailable.
 
 ---
 

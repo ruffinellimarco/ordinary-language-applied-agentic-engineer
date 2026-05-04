@@ -1,5 +1,5 @@
-# AGENTS.md — Observability Contract
-# Required for all code generation by any AI agent (Codex, ChatGPT, Copilot, etc.)
+# AGENTS.md — Universal Agent Contract
+# Required for all code generation by any AI agent (Codex, ChatGPT, Copilot, Cursor, etc.)
 
 ## Rules — Non-Negotiable
 
@@ -8,6 +8,36 @@
 3. Pure utility functions (type coercion, string formatting) MAY skip `@observable` but MUST still have docstrings.
 4. Private helpers (`_prefixed`) are exempt from `@observable` but NOT from docstrings.
 5. `__dunder__` methods are exempt from `@observable` but NOT from docstrings.
+6. **Every repository MUST keep `function-dictionary.md` and `file-dictionary.md` current.**
+
+## Behavioral Rules — Always Active
+
+Reduce common LLM coding mistakes:
+
+1. Think before coding.
+   - State assumptions explicitly.
+   - If multiple interpretations exist, present them instead of picking silently.
+   - If a simpler approach exists, say so and prefer it.
+   - If something is unclear, stop, name the confusion, and ask.
+
+2. Prefer simplicity.
+   - Add no features beyond what was requested.
+   - Add no abstractions for single-use code.
+   - Add no flexibility or configurability that was not requested.
+   - If 200 lines could be 50, rewrite it.
+
+3. Make surgical changes.
+   - Touch only what the task requires.
+   - Do not improve adjacent code, comments, or formatting.
+   - Match existing style, even if you would choose differently.
+   - Mention unrelated dead code instead of deleting it.
+   - Remove only imports, variables, or functions made unused by your change.
+
+4. Define verifiable success.
+   - Turn tasks into checks that can pass or fail.
+   - For bugs, reproduce the bug before fixing it when practical.
+   - For refactors, verify behavior before and after.
+   - For multi-step work, state a brief plan with verification for each step.
 
 ## Import
 
@@ -87,6 +117,8 @@ def process_data(data: dict) -> list:
 - `tests/` — ALL tests live here. Never in `src/`.
 - `scratch/` — Exploration and prototyping. Never deployed.
 - `src/` — Production code. Must pass all checks.
+- `function-dictionary.md` — Canonical inventory of implemented functions.
+- `file-dictionary.md` — Canonical inventory of files, responsibilities, exports, and tests.
 
 ### Workflow
 1. Write the test first: `tests/test_<module>.py`
@@ -107,6 +139,36 @@ class TestHandleRequest:
 When a scratch exploration proves useful, move it to `src/` with full
 observability compliance before considering it done.
 
+## Canonical Dictionaries
+
+The dictionaries are the repository's traceable map. Update them in the same
+change as the code so future agents can answer what is implemented and where
+without re-discovering the whole project.
+
+### `function-dictionary.md`
+For every changed production function, record:
+- Function name and signature
+- File path
+- Purpose matching the docstring
+- Observable status and tags
+- Known callers and callees
+- Test coverage
+- Status: `implemented`, `planned`, or `deprecated`
+
+### `file-dictionary.md`
+For every added, moved, deleted, or materially changed file, record:
+- File path
+- Primary responsibility
+- Exports
+- Important dependencies
+- Known users
+- Test file
+- Observable surface
+- Status: `active`, `planned`, or `deprecated`
+
+Use `TBD` for unknown relationships. Do not invent call paths, ownership, or
+test coverage.
+
 ## Async Functions
 
 The `@observable` decorator works with both sync and async functions:
@@ -123,11 +185,16 @@ async def fetch_accounts(period: str) -> list[dict]:
 After writing ANY code, run:
 
 ```bash
-python -m evals.check_observability ./src
+python -m evals.check_observability ./src ./tests --report
+python -m evals.check_dictionaries ./src --report
 ```
 
 All functions must pass before the task is complete. This check also runs
 automatically via hooks after every file edit.
+
+If your host tool does not run hooks automatically, run `/agent` after each
+code-writing tool call. `/agent` is the universal post-tool-call checkpoint:
+it verifies decorators, updates dictionaries, and reports trace gaps.
 
 ## Hooks — Automatic Enforcement
 
@@ -140,3 +207,13 @@ This project uses hooks that run automatically:
 
 You will see hook output after your edits. If violations appear, fix them
 in your next edit before proceeding with other work.
+
+## Done Criteria
+
+Before finishing any code task:
+- Observability check passes.
+- Dictionary check passes with no stale or missing entries.
+- Endpoint trace map has no unexplained gaps.
+- `function-dictionary.md` reflects changed functions.
+- `file-dictionary.md` reflects changed files.
+- Tests for changed behavior pass.

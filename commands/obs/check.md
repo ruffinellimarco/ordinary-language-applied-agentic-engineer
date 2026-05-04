@@ -32,4 +32,13 @@ Run the observability contract checker on this project.
    - Run the trace map: `python hooks/post_edit_check.py ./src`
    - Display the endpoint call-tree visualization
 
-5. Always show the compliance rate and total function count.
+5. Check canonical dictionaries:
+   - Confirm `function-dictionary.md` exists.
+   - Confirm `file-dictionary.md` exists.
+   - Run:
+     ```bash
+     python -m evals.check_dictionaries ./src --report
+     ```
+   - If dictionary violations are found, fix stale or missing entries before finishing.
+
+6. Always show the compliance rate and total function count.

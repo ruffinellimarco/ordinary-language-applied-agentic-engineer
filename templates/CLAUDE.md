@@ -14,6 +14,8 @@ python -m src.main          # Run
 pytest                      # Test
 ruff check . && mypy src/   # Lint + type check
 python -m evals.check_observability ./src   # Observability compliance
+python -m evals.check_dictionaries ./src --report   # Dictionary verification
+python hooks/post_edit_check.py ./src ./tests   # Endpoint trace map
 ```
 
 ---
@@ -46,8 +48,9 @@ Draw from vibe coding (intuitive, creative, fast) + agentic loops (autonomous, m
 2. **Plan** — Output a detailed, numbered plan (or write to `PLAN.md`). Include: files to touch/create, architecture impact, tests needed, success metrics, risks. Wait for approval or self-critique before executing.
 3. **Execute Incrementally** — Small, scoped changes. Use git branches or worktrees for parallelism. Commit after each meaningful step. Prefer sub-agents for parallel subtasks.
 4. **Test & Verify** — Run tests, manual checks, edge cases. Prove it works.
-5. **Self-Review** — "Grill" your work: list flaws, alternatives, elegance issues. Challenge yourself: "Knowing what I know now, is there a better solution?"
-6. **Close Loop** — Summarize changes. Update CLAUDE.md with lessons. Suggest next steps.
+5. **Update the Canonical Map** — Keep `function-dictionary.md` and `file-dictionary.md` aligned with changed code.
+6. **Self-Review** — "Grill" your work: list flaws, alternatives, elegance issues. Challenge yourself: "Knowing what I know now, is there a better solution?"
+7. **Close Loop** — Summarize changes. Update CLAUDE.md with lessons. Suggest next steps.
 
 For simple tasks: combine steps 2–5. For research/optimization: define a clear metric, run fixed-time experiments, evaluate, commit, loop.
 
@@ -66,13 +69,30 @@ Enforce strictly to keep context manageable and prevent entropy:
 
 ---
 
-## 5. OBSERVABILITY CONTRACT — Required for all code you write
+## 5. Behavioral Rules — Always Active
+
+Reduce common LLM coding mistakes:
+
+1. **Think before coding** — State assumptions. If multiple interpretations
+   exist, present them. If a simpler approach exists, say so. If unclear, ask.
+2. **Prefer simplicity** — No speculative features, single-use abstractions, or
+   unrequested configurability. If the solution is bloated, simplify it.
+3. **Make surgical changes** — Touch only what the task requires. Match existing
+   style. Do not refactor unrelated code. Remove only unused code created by your
+   change.
+4. **Define verifiable success** — Convert tasks into checks. Reproduce bugs
+   before fixing when practical. Verify refactors before and after.
+
+---
+
+## 6. OBSERVABILITY CONTRACT — Required for all code you write
 
 ### Rules (non-negotiable)
 1. **Every function MUST have a single-line docstring** — plain English, verb-first.
 2. **Every function that performs I/O, business logic, data transformation, external calls, or side effects MUST be decorated with `@observable`.**
 3. Pure utility functions (type coercion, string formatting, no side effects) MAY skip `@observable` but MUST still have docstrings.
 4. Internal helpers prefixed with `_` are exempt from `@observable` but not from docstrings.
+5. `function-dictionary.md` and `file-dictionary.md` must be updated with every code change.
 
 ### Import
 ```python
@@ -135,7 +155,7 @@ def process_data(data: dict) -> list:
 
 ---
 
-## 6. TDD & Directory Discipline
+## 7. TDD & Directory Discipline
 
 ### Directory structure (non-negotiable)
 ```
@@ -146,6 +166,8 @@ project/
   contracts/    # Observability decorator (vendored)
   evals/        # CI compliance checkers
   hooks/        # Enforcement scripts (post-edit, pre-commit)
+  function-dictionary.md  # Canonical function inventory
+  file-dictionary.md      # Canonical file inventory
 ```
 
 ### TDD Workflow
@@ -163,6 +185,20 @@ project/
 - `tests/` is eval'd for docstrings but not for `@observable` (test helpers are exempt).
 - When a function in `scratch/` proves useful, move it to `src/` with full compliance.
 
+## 8. Canonical Dictionaries
+
+These two files are the source of truth for what is implemented and where:
+
+- `function-dictionary.md` tracks function name, signature, file path, purpose,
+  observable status, tags, callers, callees, tests, and lifecycle status.
+- `file-dictionary.md` tracks file path, responsibility, exports, dependencies,
+  known users, tests, observable surface, and lifecycle status.
+
+Update them in the same change as the code. Use `TBD` for unknown callers,
+callees, dependencies, or tests. Do not invent trace relationships.
+Run `python -m evals.check_dictionaries ./src --report` before finishing so
+missing code entries and stale dictionary hallucinations are both caught.
+
 ### Test naming convention
 ```python
 # tests/test_main.py
@@ -177,7 +213,7 @@ class TestHandleRequest:
 
 ---
 
-## 7. Quality & Anti-Patterns
+## 9. Quality & Anti-Patterns
 
 - Always write clean, testable, minimal code.
 - Never introduce regressions.
@@ -188,21 +224,25 @@ class TestHandleRequest:
 
 ---
 
-## 8. Hooks — Automatic Enforcement
+## 10. Hooks — Automatic Enforcement
 
 Hooks run automatically — you don't invoke them manually:
 
 - **PostToolUse (Edit/Write)**: After every file edit, `hooks/post_edit_check.py`
   scans `src/` and `tests/` for violations. Fix them immediately.
 - **Pre-commit**: `hooks/pre_commit_check.py` blocks commits with violations.
-- **CI**: `python -m evals.check_observability ./src ./tests`
+- **CI**: `python -m evals.check_observability ./src ./tests` and `python -m evals.check_dictionaries ./src --report`
 
 If you see violation output after an edit, fix it in your next edit before
 proceeding with other work. The hooks are non-negotiable.
 
+For tools that do not support Claude Code hooks, run `/agent` after each
+code-writing tool call. It performs the same post-tool-call checkpoint and
+requires dictionary updates before completion.
+
 ---
 
-## 9. Updating & Improving This System
+## 11. Updating & Improving This System
 
 After any mistake, inefficiency, or breakthrough:
 - "Update CLAUDE.md with this lesson so future agents don't repeat it."

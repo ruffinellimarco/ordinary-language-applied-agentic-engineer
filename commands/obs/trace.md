@@ -37,3 +37,5 @@ Display the static call-tree for all functions tagged `@observable(tags=["endpoi
    ```
 
 4. If there are gaps in the trace (functions called by endpoints that are not @observable), flag them and suggest adding the decorator.
+
+5. Cross-check the trace against `function-dictionary.md`. If a traced function is missing from the dictionary, flag it as a canonical inventory gap.

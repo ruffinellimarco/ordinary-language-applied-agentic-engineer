@@ -72,6 +72,7 @@ ${C.cyan}After install:${C.reset}
   /obs:init          Scaffold a new project with observability contracts
   /obs:check         Run compliance check on current project
   /obs:trace         Show endpoint trace map
+  /agent             Run universal post-tool-call checkpoint
 `);
   process.exit(0);
 }
@@ -214,11 +215,10 @@ function install() {
   fs.mkdirSync(targetDir, { recursive: true });
 
   // 1. Commands
-  const commandsSrc = path.join(PACKAGE_ROOT, "commands", "obs");
-  const commandsDest = path.join(targetDir, "commands", "obs");
-  if (fs.existsSync(commandsDest)) fs.rmSync(commandsDest, { recursive: true, force: true });
+  const commandsSrc = path.join(PACKAGE_ROOT, "commands");
+  const commandsDest = path.join(targetDir, "commands");
   copyDirRecursive(commandsSrc, commandsDest);
-  console.log(`  ${C.green}\u2713${C.reset} commands/obs/ installed (${C.cyan}/obs:init${C.reset}, ${C.cyan}/obs:check${C.reset}, ${C.cyan}/obs:trace${C.reset})`);
+  console.log(`  ${C.green}\u2713${C.reset} commands/ installed (${C.cyan}/obs:init${C.reset}, ${C.cyan}/obs:check${C.reset}, ${C.cyan}/obs:trace${C.reset}, ${C.cyan}/agent${C.reset})`);
 
   // 2. Global hook
   const hookSrc = path.join(PACKAGE_ROOT, "hooks", "obs-post-edit.js");
@@ -249,6 +249,7 @@ ${C.bold}Available commands:${C.reset}
   ${C.cyan}/obs:init${C.reset}   Scaffold observability contracts into any project
   ${C.cyan}/obs:check${C.reset}  Run compliance check (docstrings + @observable)
   ${C.cyan}/obs:trace${C.reset}  Show endpoint call-tree visualization
+  ${C.cyan}/agent${C.reset}      Run universal post-tool-call checkpoint
 
 ${C.bold}What happens automatically:${C.reset}
   After every Edit/Write, the PostToolUse hook checks for violations
@@ -257,7 +258,7 @@ ${C.bold}What happens automatically:${C.reset}
 ${C.bold}Quick start:${C.reset}
   1. Open Claude Code in any project
   2. Type ${C.cyan}/obs:init${C.reset}
-  3. Start coding \u2014 the hooks enforce quality automatically
+  3. Start coding \u2014 hooks or ${C.cyan}/agent${C.reset} enforce quality automatically
 `);
 }
 
@@ -273,6 +274,10 @@ function uninstall() {
   let removed = 0;
   if (removeDirSafe(path.join(targetDir, "commands", "obs"))) {
     console.log(`  ${C.yellow}\u2713${C.reset} commands/obs/ removed`);
+    removed++;
+  }
+  if (removeFileSafe(path.join(targetDir, "commands", "agent.md"))) {
+    console.log(`  ${C.yellow}\u2713${C.reset} commands/agent.md removed`);
     removed++;
   }
   if (removeFileSafe(path.join(targetDir, "hooks", "obs-post-edit.js"))) {

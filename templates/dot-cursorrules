@@ -6,6 +6,13 @@
 - Vibe coding + agentic loops: high-level intent, autonomous execution, continuous learning.
 - Every line does one thing. Every function has one job. Every file has one concern.
 - Understand → Plan → Execute → Verify → Self-Review → Close Loop.
+- Keep `function-dictionary.md` and `file-dictionary.md` current after code changes.
+
+## Behavioral Rules
+- Think before coding: state assumptions, surface tradeoffs, and ask when unclear.
+- Prefer simplicity: no speculative features, single-use abstractions, or unrequested configurability.
+- Make surgical changes: touch only what the task requires and match existing style.
+- Define verifiable success: convert tasks into checks and loop until they pass.
 
 ## Code Rules
 - Functions: max 60 lines. Break anything longer into named helpers.
@@ -63,6 +70,13 @@ const fetchUser = observable("Fetches a user record from the database by ID", ["
 - Scratch work goes in `scratch/`. Never in `src/`.
 - `scratch/` is excluded from evals. It's disposable.
 
+## Canonical Dictionaries
+- `function-dictionary.md` tracks implemented functions, file paths, signatures, docstring-aligned purposes, observable tags, callers/callees, tests, and status.
+- `file-dictionary.md` tracks file responsibilities, exports, dependencies, users, tests, observable surface, and status.
+- Update both dictionaries in the same change as code. Use `TBD` for unknown relationships instead of guessing.
+- Run `python -m evals.check_dictionaries ./src --report` to catch missing code entries and stale hallucinated dictionary entries.
+- If Cursor does not run a post-edit hook, run `/agent` after code-writing actions.
+
 ## Git
 - Commit after every meaningful step with clear messages.
 - Use branches for parallel work.
@@ -74,5 +88,7 @@ const fetchUser = observable("Fetches a user record from the database by ID", ["
 3. Are all files under 400 lines?
 4. Are all functions under 60 lines?
 5. Do tests cover the new/changed logic? (in `tests/`, not `src/`)
-6. Is there anything to add to CLAUDE.md as a lesson?
-7. Is scratch work in `scratch/`, not mixed into `src/`?
+6. Did you update `function-dictionary.md` for changed functions?
+7. Did you update `file-dictionary.md` for changed files?
+8. Is there anything to add to CLAUDE.md as a lesson?
+9. Is scratch work in `scratch/`, not mixed into `src/`?
